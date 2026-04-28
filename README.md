@@ -1,4 +1,4 @@
-# Student Expense Tracker (Anti Gravity)
+# Student Expense Tracker
 
 A comprehensive web-based expense tracker designed for students to manage their finances, track income and expenses, and gain insights into their spending habits.
 
