@@ -83,6 +83,12 @@ const Profile: React.FC = () => {
       return;
     }
 
+    if (formData.semester && parseInt(formData.semester) < 1) {
+      setError('Semester must be a positive number starting from 1');
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await axios.put(`http://localhost:5001/api/users/${userId}`, formData);
       localStorage.setItem('user', JSON.stringify(res.data));
@@ -240,11 +246,31 @@ const Profile: React.FC = () => {
           <div className="flex-responsive">
             <div className="flex-1">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Course</label>
-              <input type="text" className="input-base" value={formData.course} onChange={e => setFormData({...formData, course: e.target.value})} />
+              <input 
+                type="text" 
+                className="input-base" 
+                value={formData.course} 
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === '' || /^[A-Za-z\s]+$/.test(val)) {
+                    setFormData({...formData, course: val});
+                  }
+                }} 
+              />
             </div>
             <div className="flex-1">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Semester</label>
-              <input type="number" className="input-base" value={formData.semester} onChange={e => setFormData({...formData, semester: e.target.value})} />
+              <input 
+                type="number" 
+                className="input-base" 
+                value={formData.semester} 
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === '' || (parseInt(val) >= 1 && parseInt(val) <= 12)) {
+                    setFormData({...formData, semester: val});
+                  }
+                }} 
+              />
             </div>
             <div className="flex-1">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Scholarship / Monthly Aid Amount (₹)</label>

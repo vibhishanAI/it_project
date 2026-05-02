@@ -16,6 +16,28 @@ const Register: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    // Final Validation Checks
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
+      setLoading(false);
+      return;
+    }
+
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      setError('Password must be at least 8 characters long, containing one uppercase letter, one digit, and one special character.');
+      setLoading(false);
+      return;
+    }
+
+    if (formData.semester && parseInt(formData.semester) < 1) {
+      setError('Semester must be a positive number starting from 1');
+      setLoading(false);
+      return;
+    }
+
     try {
       await axios.post('http://localhost:5001/api/auth/register', formData);
       alert('Registration successful! Please login.');
@@ -39,7 +61,18 @@ const Register: React.FC = () => {
           <div className="flex-responsive">
             <div className="flex-1">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Full Name</label>
-              <input type="text" className="input-base" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+              <input 
+                type="text" 
+                className="input-base" 
+                required 
+                value={formData.name} 
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === '' || /^[A-Za-z\s]+$/.test(val)) {
+                    setFormData({...formData, name: val});
+                  }
+                }} 
+              />
             </div>
             <div className="flex-1">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Reg. Number</label>
@@ -61,11 +94,31 @@ const Register: React.FC = () => {
           <div className="flex-responsive">
             <div className="flex-1">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Course</label>
-              <input type="text" className="input-base" value={formData.course} onChange={e => setFormData({...formData, course: e.target.value})} />
+              <input 
+                type="text" 
+                className="input-base" 
+                value={formData.course} 
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === '' || /^[A-Za-z\s]+$/.test(val)) {
+                    setFormData({...formData, course: val});
+                  }
+                }} 
+              />
             </div>
             <div className="flex-1">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Semester</label>
-              <input type="number" className="input-base" value={formData.semester} onChange={e => setFormData({...formData, semester: e.target.value})} />
+              <input 
+                type="number" 
+                className="input-base" 
+                value={formData.semester} 
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === '' || (parseInt(val) >= 1 && parseInt(val) <= 12)) {
+                    setFormData({...formData, semester: val});
+                  }
+                }} 
+              />
             </div>
           </div>
 
