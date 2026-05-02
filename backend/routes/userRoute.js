@@ -4,6 +4,19 @@ const router = express.Router();
 const fs = require('fs');
 const path = require('path');
 
+router.get('/:id', async (req, res) => {
+    try {
+        const user = await User.findByPk(req.params.id, {
+            attributes: { exclude: ['password_hash'] }
+        });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json(user);
+    } catch (error) {
+        console.error('Fetch User Error:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
 router.put('/:id', async (req, res) => {
     try {
         const { name, course, student_type, hostel_name, semester, phone_number, scholarship_amount, profile_image_base64 } = req.body;

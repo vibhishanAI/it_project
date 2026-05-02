@@ -16,7 +16,8 @@ const Profile: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<any[]>([]);
-  const [newCategory, setNewCategory] = useState({ name: '' });
+  const [newExpName, setNewExpName] = useState('');
+  const [newIncName, setNewIncName] = useState('');
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -24,20 +25,36 @@ const Profile: React.FC = () => {
       const parsedUser = JSON.parse(userData);
       setUserId(parsedUser.id);
       
-      setFormData({
+      // 1. Initial Load from LocalStorage (Fallback)
+      setFormData(prev => ({
+        ...prev,
         id: parsedUser.id,
         name: parsedUser.name || '',
-        course: parsedUser.course || '',
-        student_type: parsedUser.student_type || 'hosteller',
-        hostel_name: parsedUser.hostel_name || '',
-        semester: parsedUser.semester || '',
-        phone_number: parsedUser.phone_number || '',
         email: parsedUser.email || '',
-        registration_number: parsedUser.registration_number || '',
-        scholarship_amount: parsedUser.scholarship_amount || '',
-        profile_image: parsedUser.profile_image || '',
-        profile_image_base64: ''
-      });
+        student_type: parsedUser.student_type || 'hosteller',
+        registration_number: parsedUser.registration_number || ''
+      }));
+
+      // 2. Fetch fresh, detailed data from backend
+      axios.get(`http://localhost:5001/api/users/${parsedUser.id}`)
+        .then(res => {
+          const u = res.data;
+          setFormData({
+            id: u.id,
+            name: u.name || '',
+            course: u.course || '',
+            student_type: u.student_type || 'hosteller',
+            hostel_name: u.hostel_name || '',
+            semester: u.semester || '',
+            phone_number: u.phone_number || '',
+            email: u.email || '',
+            registration_number: u.registration_number || '',
+            scholarship_amount: u.scholarship_amount || '',
+            profile_image: u.profile_image || '',
+            profile_image_base64: ''
+          });
+        })
+        .catch(err => console.error("Failed to fetch user profile", err));
 
       axios.get(`http://localhost:5001/api/categories/${parsedUser.id}`)
         .then(res => setCategories(res.data))
@@ -50,6 +67,22 @@ const Profile: React.FC = () => {
     setLoading(true);
     setMessage('');
     setError('');
+
+    // Validation
+    const nameRegex = /^[A-Za-z\s]+$/;
+    if (!nameRegex.test(formData.name)) {
+      setError('Name can only contain alphabets and spaces');
+      setLoading(false);
+      return;
+    }
+
+    const phoneRegex = /^\d{10}$/;
+    if (formData.phone_number && !phoneRegex.test(formData.phone_number)) {
+      setError('enter valid phone number');
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await axios.put(`http://localhost:5001/api/users/${userId}`, formData);
       localStorage.setItem('user', JSON.stringify(res.data));
@@ -72,16 +105,33 @@ const Profile: React.FC = () => {
     }
   };
 
-  const handleCreateCategory = async (e: React.FormEvent) => {
+  const handleCreateIncomeCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if(!newCategory.name.trim()) return;
+    if(!newIncName.trim()) return;
     try {
       await axios.post('http://localhost:5001/api/categories', {
-        name: newCategory.name,
+        name: newIncName,
         type: 'custom',
+        transaction_type: 'income',
         user_id: userId
       });
-      setNewCategory({ name: '' });
+      setNewIncName('');
+      const res = await axios.get(`http://localhost:5001/api/categories/${userId}`);
+      setCategories(res.data);
+    } catch (e) { alert('Error creating category'); }
+  };
+
+  const handleCreateExpenseCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if(!newExpName.trim()) return;
+    try {
+      await axios.post('http://localhost:5001/api/categories', {
+        name: newExpName,
+        type: 'custom',
+        transaction_type: 'expense',
+        user_id: userId
+      });
+      setNewExpName('');
       const res = await axios.get(`http://localhost:5001/api/categories/${userId}`);
       setCategories(res.data);
     } catch (e) { alert('Error creating category'); }
@@ -158,11 +208,32 @@ const Profile: React.FC = () => {
           <div className="flex-responsive">
             <div className="flex-1">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Full Name</label>
-              <input type="text" className="input-base" required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+              <input 
+                type="text" 
+                className="input-base" 
+                required 
+                value={formData.name} 
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === '' || /^[A-Za-z\s]+$/.test(val)) {
+                    setFormData({...formData, name: val});
+                  }
+                }} 
+              />
             </div>
             <div className="flex-1">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Phone Number</label>
-              <input type="text" className="input-base" value={formData.phone_number} onChange={e => setFormData({...formData, phone_number: e.target.value})} />
+              <input 
+                type="text" 
+                className="input-base" 
+                value={formData.phone_number} 
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val === '' || /^\d{0,10}$/.test(val)) {
+                    setFormData({...formData, phone_number: val});
+                  }
+                }} 
+              />
             </div>
           </div>
 
@@ -216,24 +287,56 @@ const Profile: React.FC = () => {
       </div>
 
       <div className="glass-panel" style={{ padding: '30px', marginTop: '30px' }}>
-         <h3 style={{ marginBottom: '20px', color: 'var(--text-primary)' }}>Custom Categories</h3>
-         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '20px' }}>Create your own personalized categories to track spending dynamically across the app.</p>
-         
-         <form onSubmit={handleCreateCategory} style={{ display: 'flex', gap: '16px', marginBottom: '24px' }}>
-            <input type="text" className="input-base" placeholder="Enter custom category name (e.g., Zomato, Lab Supplies)" required value={newCategory.name} onChange={e => setNewCategory({ name: e.target.value })} style={{ flex: 1 }} />
-            <button type="submit" className="btn-primary"><Plus size={16}/> Create Category</button>
-         </form>
+          <h3 style={{ marginBottom: '20px', color: 'var(--text-primary)' }}>Custom Categories</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '32px' }}>Create your own personalized categories to track spending dynamically across the app.</p>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '48px' }}>
+            {/* Income Section */}
+            <div className="glass-panel" style={{ padding: '24px', background: 'rgba(16, 185, 129, 0.03)', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+              <h4 style={{ color: 'var(--success)', marginBottom: '20px', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                 Income Categories
+              </h4>
+              
+              <form onSubmit={handleCreateIncomeCategory} style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+                <input type="text" className="input-base" placeholder="New income category..." required value={newIncName} onChange={e => setNewIncName(e.target.value)} style={{ flex: 1 }} />
+                <button type="submit" className="btn-primary" style={{ background: 'var(--success)' }}><Plus size={16}/> Add</button>
+              </form>
 
-         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-            {categories.map(c => (
-              <div key={c.id} style={{ padding: '8px 16px', background: c.type === 'custom' ? 'var(--accent-gradient)' : 'var(--bg-secondary)', color: 'var(--text-primary)', borderRadius: 'var(--radius-full)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {c.name} {c.type === 'predefined' && <span style={{opacity:0.5, fontSize:'0.7rem'}}>(Default)</span>}
-                  <button onClick={() => handleDeleteCategory(c.id)} style={{background:'none', border:'none', color:'var(--text-secondary)', cursor:'pointer', padding: 0, display:'flex'}}>
-                    <Trash2 size={12} />
-                  </button>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                {categories.filter(c => c.transaction_type === 'income' || c.transaction_type === 'both').map(c => (
+                  <div key={c.id} style={{ padding: '6px 14px', background: c.type === 'custom' ? 'var(--accent-gradient)' : 'var(--bg-secondary)', color: 'var(--text-primary)', borderRadius: 'var(--radius-full)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{c.name} {c.type === 'predefined' && <small style={{opacity:0.6}}>(Default)</small>}</span>
+                    <button onClick={() => handleDeleteCategory(c.id)} style={{background:'none', border:'none', color:'var(--text-secondary)', cursor:'pointer', padding: 0, display:'flex'}}>
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
-         </div>
+            </div>
+
+            {/* Expense Section */}
+            <div className="glass-panel" style={{ padding: '24px', background: 'rgba(239, 68, 68, 0.03)', border: '1px solid rgba(239, 68, 68, 0.1)' }}>
+              <h4 style={{ color: 'var(--danger)', marginBottom: '20px', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                 Expense Categories
+              </h4>
+
+              <form onSubmit={handleCreateExpenseCategory} style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
+                <input type="text" className="input-base" placeholder="New expense category..." required value={newExpName} onChange={e => setNewExpName(e.target.value)} style={{ flex: 1 }} />
+                <button type="submit" className="btn-primary" style={{ background: 'var(--danger)' }}><Plus size={16}/> Add</button>
+              </form>
+
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                {categories.filter(c => c.transaction_type === 'expense' || c.transaction_type === 'both').map(c => (
+                  <div key={c.id} style={{ padding: '6px 14px', background: c.type === 'custom' ? 'var(--accent-gradient)' : 'var(--bg-secondary)', color: 'var(--text-primary)', borderRadius: 'var(--radius-full)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{c.name} {c.type === 'predefined' && <small style={{opacity:0.6}}>(Default)</small>}</span>
+                    <button onClick={() => handleDeleteCategory(c.id)} style={{background:'none', border:'none', color:'var(--text-secondary)', cursor:'pointer', padding: 0, display:'flex'}}>
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
       </div>
     </div>
   );

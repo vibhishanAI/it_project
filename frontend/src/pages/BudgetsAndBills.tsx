@@ -120,10 +120,12 @@ const BudgetsAndBills: React.FC = () => {
                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                    <div style={{ flex: 1 }}>
                      <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Category</label>
-                     <select className="input-base" style={{ padding: '8px' }} value={budgetForm.category_id} onChange={e => setBudgetForm({...budgetForm, category_id: e.target.value})}>
-                       <option value="">Overall Limit</option>
-                       {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                     </select>
+                      <select className="input-base" style={{ padding: '8px' }} value={budgetForm.category_id} onChange={e => setBudgetForm({...budgetForm, category_id: e.target.value})}>
+                        <option value="">Overall Limit</option>
+                        {categories.filter(c => c.transaction_type === 'expense' || c.transaction_type === 'both').map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
                    </div>
                    <div style={{ flex: 1 }}>
                      <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Period Type</label>
@@ -175,7 +177,7 @@ const BudgetsAndBills: React.FC = () => {
         ) : (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ color: 'var(--text-primary)' }}>Recurring Rules</h3>
+                <h3 style={{ color: 'var(--text-primary)' }}>Recurring Bills</h3>
                 <button onClick={() => setShowAddBill(!showAddBill)} className="btn-primary" style={{ padding: '6px 12px', fontSize: '0.85rem' }}><Plus size={14}/> Add Bill</button>
              </div>
 
@@ -192,10 +194,12 @@ const BudgetsAndBills: React.FC = () => {
                    </div>
                    <div style={{ flex: 1 }}>
                      <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Category</label>
-                     <select className="input-base" style={{ padding: '8px' }} required value={billForm.category_id} onChange={e => setBillForm({...billForm, category_id: e.target.value})}>
-                       <option value="">Select...</option>
-                       {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                     </select>
+                      <select className="input-base" style={{ padding: '8px' }} required value={billForm.category_id} onChange={e => setBillForm({...billForm, category_id: e.target.value})}>
+                        <option value="">Select...</option>
+                        {categories.filter(c => c.transaction_type === 'expense' || c.transaction_type === 'both').map(c => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
                    </div>
                  </div>
                  <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
@@ -205,7 +209,7 @@ const BudgetsAndBills: React.FC = () => {
                    </div>
                    <div style={{ flex: 2, display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 0' }}>
                      <input type="checkbox" checked={billForm.is_auto_post} onChange={e => setBillForm({...billForm, is_auto_post: e.target.checked})} />
-                     <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Auto-Post Transaction?</label>
+                     <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Auto-Pay Transaction?</label>
                    </div>
                  </div>
                  <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start' }}>Save Bill</button>

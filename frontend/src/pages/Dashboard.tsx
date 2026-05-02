@@ -140,8 +140,18 @@ const Dashboard: React.FC = () => {
     result.sort((a, b) => {
       if (sortBy === 'date_desc') return new Date(b.date).getTime() - new Date(a.date).getTime();
       if (sortBy === 'date_asc') return new Date(a.date).getTime() - new Date(b.date).getTime();
-      if (sortBy === 'amount_desc') return b.amount - a.amount;
-      if (sortBy === 'amount_asc') return a.amount - b.amount;
+      if (sortBy === 'amount_desc') return Number(b.amount) - Number(a.amount);
+      if (sortBy === 'amount_asc') return Number(a.amount) - Number(b.amount);
+      if (sortBy === 'income_high') {
+        if (a.transaction_type === 'income' && b.transaction_type !== 'income') return -1;
+        if (a.transaction_type !== 'income' && b.transaction_type === 'income') return 1;
+        return Number(b.amount) - Number(a.amount);
+      }
+      if (sortBy === 'expense_high') {
+        if (a.transaction_type === 'expense' && b.transaction_type !== 'expense') return -1;
+        if (a.transaction_type !== 'expense' && b.transaction_type === 'expense') return 1;
+        return Number(b.amount) - Number(a.amount);
+      }
       return 0;
     });
     return result;
@@ -260,7 +270,7 @@ const Dashboard: React.FC = () => {
       {/* Balance & Quick Actions */}
       <div className="grid-dashboard-main" style={{ marginBottom: '32px' }}>
         <AnalyticsCharts userId={user.id} refreshKey={refreshKey} />
-        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '16px' }}>
+        <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '16px', height: '100%' }}>
           <h3 style={{ color: 'var(--text-primary)', fontSize: '1.1rem', marginBottom: '8px' }}>Quick Actions</h3>
           <button onClick={() => openModal('income')} className="btn-primary" style={{ background: 'var(--success)', width: '100%', padding: '14px 0' }}>
             <Plus size={20} /> Add Income
@@ -317,6 +327,8 @@ const Dashboard: React.FC = () => {
                 <option value="date_asc">Oldest</option>
                 <option value="amount_desc">High Amount</option>
                 <option value="amount_asc">Low Amount</option>
+                <option value="income_high">Highest Income</option>
+                <option value="expense_high">Highest Expense</option>
               </select>
             </div>
             <div>

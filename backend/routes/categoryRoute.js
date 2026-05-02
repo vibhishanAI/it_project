@@ -26,7 +26,8 @@ router.get('/:userId', async (req, res) => {
 // Create custom category for user
 router.post('/', async (req, res) => {
     try {
-        const { user_id, name, icon_name, color_hex } = req.body;
+        console.log('Incoming category creation request:', req.body);
+        const { user_id, name, icon_name, color_hex, transaction_type } = req.body;
         
         if (!user_id || !name) return res.status(400).json({ error: 'Missing required fields' });
 
@@ -34,6 +35,7 @@ router.post('/', async (req, res) => {
             user_id,
             name,
             type: 'custom',
+            transaction_type: transaction_type || 'expense',
             icon_name: icon_name || 'ellipsis-h',
             color_hex: color_hex || '#B2BABB'
         });

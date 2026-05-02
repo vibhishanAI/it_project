@@ -29,6 +29,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, us
   });
   const [loading, setLoading] = useState(false);
   const [balanceError, setBalanceError] = useState('');
+  const [dateError, setDateError] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -72,7 +73,15 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, us
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBalanceError('');
+    setDateError('');
     setLoading(true);
+
+    if (new Date(formData.date) > new Date()) {
+      setDateError('Future dates and times are not allowed.');
+      setLoading(false);
+      return;
+    }
+
     try {
       // Balance guard — only block NEW expense submissions
       if (formData.transaction_type === 'expense' && !transactionToEdit) {
@@ -163,18 +172,35 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, us
           <div className="flex-responsive">
             <div className="flex-1">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Date & Time</label>
-              <input type="datetime-local" className="input-base" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+              <input 
+                type="datetime-local" 
+                className="input-base" 
+                required 
+                max={getLocalISOString()} 
+                value={formData.date} 
+                onChange={e => {
+                  setDateError('');
+                  setFormData({...formData, date: e.target.value});
+                  if (new Date(e.target.value) > new Date()) {
+                    setDateError('Future time is not allowed');
+                  }
+                }} 
+              />
             </div>
             <div className="flex-1">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Payment Method</label>
               <select className="input-base" value={formData.payment_method} onChange={e => setFormData({...formData, payment_method: e.target.value})}>
                 <option value="Cash">Cash</option>
-                <option value="Bank">Bank</option>
+                <option value="UPI">UPI</option>
+                <option value="Debit Card">Debit Card</option>
+                <option value="Credit Card">Credit Card</option>
+                <option value="Net Banking">Net Banking</option>
+                <option value="Bank">Bank Transfer</option>
               </select>
             </div>
           </div>
 
-          {balanceError && (
+          {(balanceError || dateError) && (
             <div style={{
               padding: '12px 16px',
               background: 'rgba(239, 68, 68, 0.12)',
@@ -184,7 +210,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, us
               fontSize: '0.88rem',
               fontWeight: 500
             }}>
-              ⚠️ {balanceError}
+              ⚠️ {balanceError || dateError}
             </div>
           )}
 
