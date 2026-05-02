@@ -204,9 +204,6 @@ const Dashboard: React.FC = () => {
           <button onClick={() => navigate('/profile')} className="btn-primary" style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
             <User size={16} /> Profile
           </button>
-          <button onClick={handleLogout} className="btn-primary" style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>
-            <LogOut size={16} /> Logout
-          </button>
         </div>
 
         {/* Mobile Navigation Toggle */}
@@ -231,9 +228,6 @@ const Dashboard: React.FC = () => {
             </button>
             <button onClick={() => navigate('/profile')} className="btn-primary" style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', width: '100%', justifyContent: 'flex-start' }}>
               <User size={16} /> Profile
-            </button>
-            <button onClick={handleLogout} className="btn-primary" style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', width: '100%', justifyContent: 'flex-start' }}>
-              <LogOut size={16} /> Logout
             </button>
           </div>
         )}
@@ -351,9 +345,9 @@ const Dashboard: React.FC = () => {
                             <IndianRupee size={16} />
                           </div>
                           <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.95rem' }}>{tx.source_or_description || tx.category?.name}</div>
+                            <div style={{ fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '0.95rem' }}>{tx.category?.name || 'General'}</div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {new Date(tx.date).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })} · {tx.category?.name || 'General'} · {tx.payment_method}
+                                {new Date(tx.date).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })} · {tx.source_or_description || 'No description'} · {tx.payment_method}
                             </div>
                           </div>
                         </div>

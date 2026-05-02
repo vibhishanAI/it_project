@@ -13,12 +13,18 @@ interface TransactionModalProps {
 
 const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, userId, transactionToEdit, initialType, onSuccess }) => {
   const [categories, setCategories] = useState<any[]>([]);
+  const getLocalISOString = (d?: string | Date) => {
+    const date = d ? new Date(d) : new Date();
+    const tzOffset = date.getTimezoneOffset() * 60000;
+    return new Date(date.getTime() - tzOffset).toISOString().slice(0, 16);
+  };
+
   const [formData, setFormData] = useState({
     amount: '',
     transaction_type: 'expense',
     category_id: '',
     source_or_description: '',
-    date: new Date().toISOString().slice(0, 16),
+    date: getLocalISOString(),
     payment_method: 'Cash'
   });
   const [loading, setLoading] = useState(false);
@@ -34,7 +40,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, us
           transaction_type: transactionToEdit.transaction_type,
           category_id: transactionToEdit.category_id || '',
           source_or_description: transactionToEdit.source_or_description || '',
-          date: transactionToEdit.date ? new Date(transactionToEdit.date).toISOString().slice(0, 16) : '',
+          date: transactionToEdit.date ? getLocalISOString(transactionToEdit.date) : getLocalISOString(),
           payment_method: transactionToEdit.payment_method || 'Cash'
         });
       } else {
@@ -43,7 +49,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, us
           transaction_type: initialType || 'expense',
           category_id: '',
           source_or_description: '',
-          date: new Date().toISOString().slice(0, 16),
+          date: getLocalISOString(),
           payment_method: 'Cash'
         });
       }

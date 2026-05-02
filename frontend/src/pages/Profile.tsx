@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Save, ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { Save, ArrowLeft, Plus, Trash2, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Profile: React.FC = () => {
@@ -8,8 +8,9 @@ const Profile: React.FC = () => {
     id: '', name: '', course: '', student_type: 'hosteller',
     hostel_name: '', semester: '', phone_number: '',
     email: '', registration_number: '', scholarship_amount: '',
-    profile_image: ''
+    profile_image: '', profile_image_base64: ''
   });
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [userId, setUserId] = useState<number | null>(null);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -34,7 +35,8 @@ const Profile: React.FC = () => {
         email: parsedUser.email || '',
         registration_number: parsedUser.registration_number || '',
         scholarship_amount: parsedUser.scholarship_amount || '',
-        profile_image: parsedUser.profile_image || ''
+        profile_image: parsedUser.profile_image || '',
+        profile_image_base64: ''
       });
 
       axios.get(`http://localhost:5001/api/categories/${parsedUser.id}`)
@@ -59,6 +61,17 @@ const Profile: React.FC = () => {
     }
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, profile_image_base64: reader.result as string, profile_image: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if(!newCategory.name.trim()) return;
@@ -75,7 +88,7 @@ const Profile: React.FC = () => {
   };
 
   const handleDeleteCategory = async (catId: number) => {
-    if(!window.confirm('Delete this custom category?')) return;
+    if(!window.confirm('Delete this category?')) return;
     try {
       await axios.delete(`http://localhost:5001/api/categories/${catId}`);
       const res = await axios.get(`http://localhost:5001/api/categories/${userId}`);
@@ -83,13 +96,24 @@ const Profile: React.FC = () => {
     } catch (e) { alert('Failed to delete category'); }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/';
+  };
+
   return (
     <div className="container animate-fade-in" style={{ padding: '40px 24px', maxWidth: '800px' }}>
-      <header style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '32px' }}>
-        <Link to="/dashboard" style={{ color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-          <ArrowLeft size={20} />
-        </Link>
-        <h1 className="text-gradient">My Profile</h1>
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <Link to="/dashboard" style={{ color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+            <ArrowLeft size={20} />
+          </Link>
+          <h1 className="text-gradient">My Profile</h1>
+        </div>
+        <button onClick={handleLogout} className="btn-primary" style={{ background: 'var(--bg-secondary)', color: 'var(--danger)' }}>
+          <LogOut size={16} /> Logout
+        </button>
       </header>
 
       <div className="glass-panel" style={{ padding: '30px' }}>
@@ -98,29 +122,36 @@ const Profile: React.FC = () => {
 
         <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-        {/* Profile image preview + URL input */}
+        {/* Profile image preview + Local Upload */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px', marginBottom: '8px' }}>
-            <div style={{
+            <div 
+              onClick={() => fileInputRef.current?.click()}
+              style={{
               width: 80, height: 80, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
               border: '2px solid var(--glass-border)',
               background: 'var(--bg-secondary)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center'
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', position: 'relative'
             }}>
               {formData.profile_image
                 ? <img src={formData.profile_image} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : <span style={{ fontSize: '2rem' }}>👤</span>
               }
+              <div style={{ position: 'absolute', bottom: 0, background: 'rgba(0,0,0,0.5)', width: '100%', textAlign: 'center', fontSize: '0.6rem', padding: '2px 0', color: 'white' }}>Edit</div>
             </div>
             <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Profile Image URL</label>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Profile Photo</label>
               <input
-                type="url"
-                className="input-base"
-                placeholder="https://example.com/avatar.jpg"
-                value={formData.profile_image}
-                onChange={e => setFormData({...formData, profile_image: e.target.value})}
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                onChange={handleImageUpload}
+                style={{ display: 'none' }}
               />
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>Paste a public image URL — it will be saved to your profile.</p>
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="btn-primary" style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--glass-border)' }}>
+                Choose Image
+              </button>
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '8px' }}>Select a local photo to upload as your profile picture.</p>
             </div>
           </div>
 
@@ -197,11 +228,9 @@ const Profile: React.FC = () => {
             {categories.map(c => (
               <div key={c.id} style={{ padding: '8px 16px', background: c.type === 'custom' ? 'var(--accent-gradient)' : 'var(--bg-secondary)', color: 'var(--text-primary)', borderRadius: 'var(--radius-full)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {c.name} {c.type === 'predefined' && <span style={{opacity:0.5, fontSize:'0.7rem'}}>(Default)</span>}
-                {c.type === 'custom' && (
                   <button onClick={() => handleDeleteCategory(c.id)} style={{background:'none', border:'none', color:'var(--text-secondary)', cursor:'pointer', padding: 0, display:'flex'}}>
                     <Trash2 size={12} />
                   </button>
-                )}
               </div>
             ))}
          </div>

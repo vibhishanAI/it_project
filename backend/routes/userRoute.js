@@ -1,13 +1,25 @@
 const express = require('express');
 const { User } = require('../models');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 
 router.put('/:id', async (req, res) => {
     try {
-        const { name, course, student_type, hostel_name, semester, phone_number, scholarship_amount, profile_image } = req.body;
+        const { name, course, student_type, hostel_name, semester, phone_number, scholarship_amount, profile_image_base64 } = req.body;
+        let { profile_image } = req.body;
         const user = await User.findByPk(req.params.id);
 
         if (!user) return res.status(404).json({ error: 'User not found' });
+
+        if (profile_image_base64) {
+            // Remove header if present (e.g. data:image/jpeg;base64,)
+            const base64Data = profile_image_base64.replace(/^data:image\/\w+;base64,/, "");
+            const filename = `profile-${user.id}-${Date.now()}.jpg`;
+            const filepath = path.join(__dirname, '../public/uploads', filename);
+            fs.writeFileSync(filepath, base64Data, 'base64');
+            profile_image = `http://localhost:5001/uploads/${filename}`;
+        }
 
         await user.update({
             name,

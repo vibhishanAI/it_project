@@ -9,9 +9,12 @@ async function run() {
             host: process.env.DB_HOST,
             user: process.env.DB_USER,
             password: process.env.DB_PASS,
-            database: process.env.DB_NAME,
             multipleStatements: true
         });
+        
+        console.log(`Ensuring database '${process.env.DB_NAME}' exists...`);
+        await connection.query(`CREATE DATABASE IF NOT EXISTS \`${process.env.DB_NAME}\`;`);
+        await connection.query(`USE \`${process.env.DB_NAME}\`;`);
         
         console.log('Connected to MySQL. Running DDL schema...');
         const ddl = fs.readFileSync(path.join(__dirname, '../schema_ddl.sql'), 'utf-8');

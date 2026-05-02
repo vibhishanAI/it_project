@@ -10,7 +10,7 @@ router.get('/:userId', async (req, res) => {
         const categories = await Category.findAll({
             where: {
                 [Op.or]: [
-                    { type: 'predefined' },
+                    { type: 'predefined', deleted_at: null },
                     { user_id: req.params.userId, type: 'custom', deleted_at: null }
                 ]
             },
@@ -45,12 +45,11 @@ router.post('/', async (req, res) => {
     }
 });
 
-// Soft Delete custom category (only custom categories can be deleted)
+// Soft Delete category
 router.delete('/:id', async (req, res) => {
     try {
         const category = await Category.findByPk(req.params.id);
         if (!category) return res.status(404).json({ error: 'Not found' });
-        if (category.type === 'predefined') return res.status(403).json({ error: 'Cannot delete predefined categories' });
 
         category.deleted_at = new Date();
         await category.save();
