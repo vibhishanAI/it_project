@@ -117,7 +117,7 @@ const BudgetsAndBills: React.FC = () => {
 
              {showAddBudget && (
                <form onSubmit={handleAddBudget} style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: 'var(--bg-secondary)', padding: '20px', borderRadius: 'var(--radius-sm)', marginBottom: '20px' }}>
-                 <div style={{ display: 'flex', gap: '12px' }}>
+                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                    <div style={{ flex: 1 }}>
                      <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Category</label>
                      <select className="input-base" style={{ padding: '8px' }} value={budgetForm.category_id} onChange={e => setBudgetForm({...budgetForm, category_id: e.target.value})}>
@@ -137,7 +137,7 @@ const BudgetsAndBills: React.FC = () => {
                      <input type="number" step="0.01" className="input-base" style={{ padding: '8px' }} required value={budgetForm.amount_limit} onChange={e => setBudgetForm({...budgetForm, amount_limit: e.target.value})} />
                    </div>
                  </div>
-                 <div style={{ display: 'flex', gap: '12px' }}>
+                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                    <div style={{ flex: 1 }}>
                      <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Start Date</label>
                      <input type="date" className="input-base" style={{ padding: '8px' }} required value={budgetForm.start_date} onChange={e => setBudgetForm({...budgetForm, start_date: e.target.value})} />
@@ -181,7 +181,7 @@ const BudgetsAndBills: React.FC = () => {
 
              {showAddBill && (
                <form onSubmit={handleAddBill} style={{ display: 'flex', flexDirection: 'column', gap: '12px', background: 'var(--bg-secondary)', padding: '20px', borderRadius: 'var(--radius-sm)', marginBottom: '20px' }}>
-                 <div style={{ display: 'flex', gap: '12px' }}>
+                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                    <div style={{ flex: 1 }}>
                      <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Title</label>
                      <input type="text" className="input-base" style={{ padding: '8px' }} required value={billForm.title} onChange={e => setBillForm({...billForm, title: e.target.value})} />
@@ -198,7 +198,7 @@ const BudgetsAndBills: React.FC = () => {
                      </select>
                    </div>
                  </div>
-                 <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
+                 <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
                    <div style={{ flex: 1 }}>
                      <label style={{ display: 'block', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Next Due Date</label>
                      <input type="date" className="input-base" style={{ padding: '8px' }} required value={billForm.due_date} onChange={e => setBillForm({...billForm, due_date: e.target.value})} />

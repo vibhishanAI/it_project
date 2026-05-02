@@ -153,6 +153,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: var(--bg-primary);
@@ -163,4 +164,81 @@ h1, h2, h3, h4, h5, h6 {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: var(--accent-primary);
+}
+
+/* --- Responsive Utilities --- */
+
+/* Responsive Grid (1 col mobile, 2+ col tablet/desktop) */
+.grid-responsive {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+/* Dashboard specific grid: 2fr 1fr on desktop, 1fr on mobile */
+.grid-dashboard-main {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 768px) {
+  .grid-responsive {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  }
+  .grid-dashboard-main {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+
+/* Table Container for horizontal scrolling on mobile */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-container table {
+  width: 100%;
+}
+
+/* Mobile Header / Navigation specific utilities */
+.mobile-nav-hidden {
+  display: none;
+}
+
+.mobile-nav-visible {
+  display: flex;
+}
+
+@media (min-width: 768px) {
+  .mobile-nav-hidden {
+    display: flex;
+  }
+  .mobile-nav-visible {
+    display: none;
+  }
+}
+
+/* Adjustments for smaller padding on mobile containers */
+@media (max-width: 600px) {
+  .container {
+    padding: 20px 16px;
+  }
+  .glass-panel {
+    padding: 16px !important; /* Override inline paddings on mobile */
+  }
+  .table-container th, .table-container td {
+    padding: 8px 4px !important;
+    font-size: 0.75rem !important;
+  }
+}
+
+/* Hide Scrollbar for clean mobile scrolling */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }

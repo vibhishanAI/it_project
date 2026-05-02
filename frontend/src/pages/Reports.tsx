@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
   ArrowLeft, Download, BarChart2, Users, BookOpen,
-  Home, IndianRupee, TrendingUp, TrendingDown, Info, Calendar, Activity
+  Home, IndianRupee, TrendingUp, TrendingDown, Info, Calendar, Activity, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -65,6 +65,7 @@ const TabBtn: React.FC<{ icon: React.ReactNode; label: string; active: boolean; 
       color: active ? 'var(--accent-primary)' : 'var(--text-secondary)',
       cursor: 'pointer', fontWeight: active ? 600 : 400,
       fontSize: '0.88rem', transition: 'all 0.2s ease',
+      flexShrink: 0, whiteSpace: 'nowrap',
     }}
   >
     {icon} {label}
@@ -75,10 +76,11 @@ const TabBtn: React.FC<{ icon: React.ReactNode; label: string; active: boolean; 
 const Reports: React.FC = () => {
   const [userId, setUserId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'category' | 'type' | 'semester' | 'hostel' | 'time' | 'trend'>('category');
+  const [showTabs, setShowTabs] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Data states
-  const [catData, setCatData] = useState<any[]>([]);
+  const [catData, setCatData] = useState<{ expenses: any[], incomes: any[] }>({ expenses: [], incomes: [] });
   const [typeData, setTypeData] = useState<any>(null);
   const [semData, setSemData] = useState<any>(null);
   const [hostelData, setHostelData] = useState<any>(null);
@@ -105,7 +107,7 @@ const Reports: React.FC = () => {
     if (!userId) return;
     setLoading(true);
     try {
-      if (tab === 'category' && catData.length === 0) {
+      if (tab === 'category' && (!catData.expenses || catData.expenses.length === 0) && (!catData.incomes || catData.incomes.length === 0)) {
         const r = await axios.get(`${API}/${userId}/category-breakdown`);
         setCatData(r.data);
       }
@@ -136,6 +138,18 @@ const Reports: React.FC = () => {
     }
   };
 
+  const getTabLabel = (tab: string) => {
+    switch (tab) {
+      case 'category': return 'My Categories';
+      case 'type': return 'vs Student Type';
+      case 'semester': return 'vs My Semester';
+      case 'hostel': return 'Hostel Comparison';
+      case 'time': return 'Weekly / Monthly';
+      case 'trend': return 'Balance Trend';
+      default: return 'Reports';
+    }
+  };
+
   // ── Export helpers (active tab) ───────────────────────────
   const exportPDF = () => {
     const doc = new jsPDF();
@@ -146,17 +160,34 @@ const Reports: React.FC = () => {
       doc.text('UoH Analytics — My Category Breakdown', 14, 18);
       doc.setFontSize(10);
       doc.text(`Generated: ${date}`, 14, 26);
-      const grandTotal = catData.reduce((s, c) => s + Number(c.total), 0);
+      const expenses = catData.expenses || [];
+      const incomes = catData.incomes || [];
+      const grandTotalExp = expenses.reduce((s: number, c: any) => s + Number(c.total), 0);
       autoTable(doc, {
         startY: 32,
-        head: [['Category', 'Total Spent (₹)', 'Transactions', '% of Expenses']],
-        body: catData.map(c => [
+        head: [['Expense Category', 'Total Spent (₹)', 'Transactions', '% of Expenses']],
+        body: expenses.map((c: any) => [
           c.category,
           `₹${Number(c.total).toFixed(2)}`,
           c.txn_count,
-          `${((Number(c.total) / grandTotal) * 100).toFixed(1)}%`
+          `${grandTotalExp > 0 ? ((Number(c.total) / grandTotalExp) * 100).toFixed(1) : '0'}%`
         ]),
       });
+
+      if (incomes.length > 0) {
+        const grandTotalInc = incomes.reduce((s: number, c: any) => s + Number(c.total), 0);
+        doc.text("Income Breakdown", 14, (doc as any).lastAutoTable.finalY + 15);
+        autoTable(doc, {
+          startY: (doc as any).lastAutoTable.finalY + 20,
+          head: [['Income Category', 'Total Received (₹)', 'Transactions', '% of Income']],
+          body: incomes.map((c: any) => [
+            c.category,
+            `₹${Number(c.total).toFixed(2)}`,
+            c.txn_count,
+            `${grandTotalInc > 0 ? ((Number(c.total) / grandTotalInc) * 100).toFixed(1) : '0'}%`
+          ]),
+        });
+      }
       doc.save('UoH_Category_Report.pdf');
 
     } else if (activeTab === 'type' && typeData) {
@@ -226,6 +257,39 @@ const Reports: React.FC = () => {
         ]),
       });
       doc.save('UoH_Hostel_Report.pdf');
+    } else if (activeTab === 'time' && timeSummary) {
+      const data = timeView === 'monthly' ? timeSummary.monthly : timeSummary.weekly;
+      doc.setFontSize(16);
+      doc.text(`UoH Analytics — ${timeView === 'monthly' ? 'Monthly' : 'Weekly'} Summary`, 14, 18);
+      doc.setFontSize(10);
+      doc.text(`Generated: ${date}`, 14, 26);
+      autoTable(doc, {
+        startY: 32,
+        head: [['Period', 'Income (₹)', 'Expense (₹)', 'Net (₹)']],
+        body: data.map((d: any) => [
+          d.label,
+          `+₹${Number(d.income).toFixed(0)}`,
+          `-₹${Number(d.expense).toFixed(0)}`,
+          `${d.net >= 0 ? '+' : ''}₹${Number(d.net).toFixed(0)}`
+        ]),
+      });
+      doc.save(`UoH_${timeView === 'monthly' ? 'Monthly' : 'Weekly'}_Report.pdf`);
+    } else if (activeTab === 'trend' && balanceTrend.length > 0) {
+      doc.setFontSize(16);
+      doc.text('UoH Analytics — Balance Trend', 14, 18);
+      doc.setFontSize(10);
+      doc.text(`Generated: ${date}`, 14, 26);
+      autoTable(doc, {
+        startY: 32,
+        head: [['Date', 'Income (₹)', 'Expense (₹)', 'Running Balance (₹)']],
+        body: balanceTrend.map((d: any) => [
+          d.label,
+          `+₹${Number(d.income).toFixed(0)}`,
+          `-₹${Number(d.expense).toFixed(0)}`,
+          `₹${Number(d.balance).toFixed(0)}`
+        ]),
+      });
+      doc.save('UoH_Balance_Trend_Report.pdf');
     }
   };
 
@@ -233,14 +297,27 @@ const Reports: React.FC = () => {
     const wb = XLSX.utils.book_new();
 
     if (activeTab === 'category') {
-      const grandTotal = catData.reduce((s, c) => s + Number(c.total), 0);
-      const ws = XLSX.utils.json_to_sheet(catData.map(c => ({
+      const expenses = catData.expenses || [];
+      const incomes = catData.incomes || [];
+      const grandTotalExp = expenses.reduce((s: number, c: any) => s + Number(c.total), 0);
+      const wsExp = XLSX.utils.json_to_sheet(expenses.map((c: any) => ({
         Category: c.category,
         'Total Spent (₹)': Number(c.total).toFixed(2),
         Transactions: c.txn_count,
-        '% of Expenses': `${((Number(c.total) / grandTotal) * 100).toFixed(1)}%`
+        '% of Expenses': `${grandTotalExp > 0 ? ((Number(c.total) / grandTotalExp) * 100).toFixed(1) : '0'}%`
       })));
-      XLSX.utils.book_append_sheet(wb, ws, 'Category Breakdown');
+      XLSX.utils.book_append_sheet(wb, wsExp, 'Expense Breakdown');
+
+      if (incomes.length > 0) {
+        const grandTotalInc = incomes.reduce((s: number, c: any) => s + Number(c.total), 0);
+        const wsInc = XLSX.utils.json_to_sheet(incomes.map((c: any) => ({
+          Category: c.category,
+          'Total Received (₹)': Number(c.total).toFixed(2),
+          Transactions: c.txn_count,
+          '% of Income': `${grandTotalInc > 0 ? ((Number(c.total) / grandTotalInc) * 100).toFixed(1) : '0'}%`
+        })));
+        XLSX.utils.book_append_sheet(wb, wsInc, 'Income Breakdown');
+      }
       XLSX.writeFile(wb, 'UoH_Category_Report.xlsx');
 
     } else if (activeTab === 'type' && typeData) {
@@ -284,6 +361,25 @@ const Reports: React.FC = () => {
       })));
       XLSX.utils.book_append_sheet(wb, ws, 'Hostel Stats');
       XLSX.writeFile(wb, 'UoH_Hostel_Report.xlsx');
+    } else if (activeTab === 'time' && timeSummary) {
+      const data = timeView === 'monthly' ? timeSummary.monthly : timeSummary.weekly;
+      const ws = XLSX.utils.json_to_sheet(data.map((d: any) => ({
+        Period: d.label,
+        'Income (₹)': Number(d.income).toFixed(0),
+        'Expense (₹)': Number(d.expense).toFixed(0),
+        'Net (₹)': Number(d.net).toFixed(0)
+      })));
+      XLSX.utils.book_append_sheet(wb, ws, `${timeView === 'monthly' ? 'Monthly' : 'Weekly'} Summary`);
+      XLSX.writeFile(wb, `UoH_${timeView === 'monthly' ? 'Monthly' : 'Weekly'}_Report.xlsx`);
+    } else if (activeTab === 'trend' && balanceTrend.length > 0) {
+      const ws = XLSX.utils.json_to_sheet(balanceTrend.map((d: any) => ({
+        Date: d.label,
+        'Income (₹)': Number(d.income).toFixed(0),
+        'Expense (₹)': Number(d.expense).toFixed(0),
+        'Running Balance (₹)': Number(d.balance).toFixed(0)
+      })));
+      XLSX.utils.book_append_sheet(wb, ws, 'Balance Trend');
+      XLSX.writeFile(wb, 'UoH_Balance_Trend_Report.xlsx');
     }
   };
 
@@ -388,14 +484,31 @@ const Reports: React.FC = () => {
       </header>
 
       {/* Tab Bar */}
-      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '28px' }}>
-        <TabBtn icon={<BarChart2 size={15} />} label="My Categories" active={activeTab === 'category'} onClick={() => setActiveTab('category')} />
-        <TabBtn icon={<Users size={15} />} label="vs Student Type" active={activeTab === 'type'} onClick={() => setActiveTab('type')} />
-        <TabBtn icon={<BookOpen size={15} />} label="vs My Semester" active={activeTab === 'semester'} onClick={() => setActiveTab('semester')} />
-        <TabBtn icon={<Home size={15} />} label="Hostel Comparison" active={activeTab === 'hostel'} onClick={() => setActiveTab('hostel')} />
-        <TabBtn icon={<Calendar size={15} />} label="Weekly / Monthly" active={activeTab === 'time'} onClick={() => setActiveTab('time')} />
-        <TabBtn icon={<Activity size={15} />} label="Balance Trend" active={activeTab === 'trend'} onClick={() => setActiveTab('trend')} />
+      <div style={{ marginBottom: '20px' }}>
+        <button 
+          onClick={() => setShowTabs(!showTabs)} 
+          className="glass-panel" 
+          style={{ width: '100%', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-secondary)', border: '1px solid var(--glass-border)', cursor: 'pointer', color: 'var(--text-primary)', fontWeight: 600, transition: 'all 0.2s' }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <BarChart2 size={18} color="var(--accent-primary)" /> 
+            {getTabLabel(activeTab)}
+          </span>
+          {showTabs ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+        </button>
+        
+        {showTabs && (
+          <div className="animate-fade-in" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '12px', padding: '16px', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)' }}>
+            <TabBtn icon={<BarChart2 size={15} />} label="My Categories" active={activeTab === 'category'} onClick={() => { setActiveTab('category'); setShowTabs(false); }} />
+            <TabBtn icon={<Users size={15} />} label="vs Student Type" active={activeTab === 'type'} onClick={() => { setActiveTab('type'); setShowTabs(false); }} />
+            <TabBtn icon={<BookOpen size={15} />} label="vs My Semester" active={activeTab === 'semester'} onClick={() => { setActiveTab('semester'); setShowTabs(false); }} />
+            <TabBtn icon={<Home size={15} />} label="Hostel Comparison" active={activeTab === 'hostel'} onClick={() => { setActiveTab('hostel'); setShowTabs(false); }} />
+            <TabBtn icon={<Calendar size={15} />} label="Weekly / Monthly" active={activeTab === 'time'} onClick={() => { setActiveTab('time'); setShowTabs(false); }} />
+            <TabBtn icon={<Activity size={15} />} label="Balance Trend" active={activeTab === 'trend'} onClick={() => { setActiveTab('trend'); setShowTabs(false); }} />
+          </div>
+        )}
       </div>
+
 
       {loading && (
         <div className="glass-panel" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
@@ -419,91 +532,127 @@ const Reports: React.FC = () => {
       {!loading && activeTab === 'category' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-          {catData.length === 0 ? (
+          {(!catData.expenses || catData.expenses.length === 0) && (!catData.incomes || catData.incomes.length === 0) ? (
             <div className="glass-panel" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
               No expense data yet. Add some transactions to see your breakdown!
             </div>
           ) : (
             <>
-              {/* Summary Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
-                {catData.slice(0, 4).map((c, i) => (
-                  <div key={i} className="glass-panel" style={{ padding: '20px', borderLeft: `4px solid ${c.color || BAR_COLOR}` }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '6px' }}>{c.category}</div>
-                    <div style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-primary)' }}>₹{Number(c.total).toFixed(0)}</div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '4px' }}>{c.txn_count} transaction{c.txn_count !== 1 ? 's' : ''}</div>
+              {/* Expenses Breakdown */}
+              {catData.expenses && catData.expenses.length > 0 && (
+                <>
+                  <div className="glass-panel animate-fade-in" style={{ padding: '24px' }}>
+                    <h3 style={{ color: 'var(--text-primary)', marginBottom: '20px', fontSize: '1rem' }}>Expense Share</h3>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <PieChart>
+                        <Pie data={(catData.expenses || []).map((c: any) => ({ ...c, total: Number(c.total) }))} dataKey="total" nameKey="category" cx="50%" cy="50%" outerRadius={100} label={(props: any) => `${props.name} (${((props.percent || 0) * 100).toFixed(0)}%)`} labelLine={true}>
+                          {(catData.expenses || []).map((c: any, i: number) => <Cell key={i} fill={c.color || `hsl(${i * 37}, 70%, 55%)`} />)}
+                        </Pie>
+                        <Tooltip formatter={(v: any) => `₹${Number(v).toFixed(2)}`} />
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-                ))}
-              </div>
 
-              {/* Bar Chart */}
-              <div className="glass-panel" style={{ padding: '24px' }}>
-                <h3 style={{ color: 'var(--text-primary)', marginBottom: '20px', fontSize: '1rem' }}>Spending by Category</h3>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={catData.map(c => ({ name: c.category, amount: Number(c.total), fill: c.color || BAR_COLOR }))} margin={{ top: 0, right: 10, left: 0, bottom: 40 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                    <XAxis dataKey="name" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} angle={-35} textAnchor="end" interval={0} />
-                    <YAxis tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} tickFormatter={v => `₹${v}`} />
-                    <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="amount" name="Spending" radius={[4, 4, 0, 0]}>
-                      {catData.map((c, i) => <Cell key={i} fill={c.color || BAR_COLOR} />)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Pie Chart */}
-              <div className="glass-panel" style={{ padding: '24px' }}>
-                <h3 style={{ color: 'var(--text-primary)', marginBottom: '20px', fontSize: '1rem' }}>Expense Share</h3>
-                <ResponsiveContainer width="100%" height={260}>
-                  <PieChart>
-                    <Pie data={catData} dataKey="total" nameKey="category" cx="50%" cy="50%" outerRadius={100} label={(props: any) => `${props.name} (${((props.percent || 0) * 100).toFixed(0)}%)`} labelLine={true}>
-                      {catData.map((c, i) => <Cell key={i} fill={c.color || `hsl(${i * 37}, 70%, 55%)`} />)}
-                    </Pie>
-                    <Tooltip formatter={(v: any) => `₹${Number(v).toFixed(2)}`} />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-
-              {/* Table */}
-              <div className="glass-panel" style={{ padding: '24px' }}>
-                <h3 style={{ color: 'var(--text-primary)', marginBottom: '16px', fontSize: '1rem' }}>Full Category Breakdown</h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
-                      {['Category', 'Total Spent', 'Transactions', '% of Expenses'].map(h => (
-                        <th key={h} style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(() => {
-                      const grandTotal = catData.reduce((s, c) => s + Number(c.total), 0);
-                      return catData.map((c, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid var(--glass-border)' }}>
-                          <td style={{ padding: '12px 12px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: c.color || BAR_COLOR }} />
-                            {c.category}
-                          </td>
-                          <td style={{ padding: '12px', color: 'var(--text-primary)', fontWeight: 600 }}>₹{Number(c.total).toFixed(2)}</td>
-                          <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{c.txn_count}</td>
-                          <td style={{ padding: '12px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <div style={{ flex: 1, height: 6, background: 'var(--bg-secondary)', borderRadius: 99 }}>
-                                <div style={{ width: `${((Number(c.total) / grandTotal) * 100).toFixed(0)}%`, height: '100%', background: c.color || BAR_COLOR, borderRadius: 99 }} />
-                              </div>
-                              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: 36 }}>
-                                {((Number(c.total) / grandTotal) * 100).toFixed(1)}%
-                              </span>
-                            </div>
-                          </td>
+                  <div className="glass-panel animate-fade-in" style={{ padding: '24px' }}>
+                    <h3 style={{ color: 'var(--text-primary)', marginBottom: '16px', fontSize: '1rem' }}>Expense Categories</h3>
+                    <div className="table-container">
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                          {['Category', 'Total Spent', 'Transactions', '% of Expenses'].map(h => (
+                            <th key={h} style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>{h}</th>
+                          ))}
                         </tr>
-                      ));
-                    })()}
-                  </tbody>
-                </table>
-              </div>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const expenses = catData.expenses || [];
+                          const grandTotal = expenses.reduce((s: number, c: any) => s + Number(c.total), 0);
+                          return expenses.map((c: any, i: number) => (
+                            <tr key={i} style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                              <td style={{ padding: '12px 12px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: c.color || BAR_COLOR }} />
+                                {c.category}
+                              </td>
+                              <td style={{ padding: '12px', color: 'var(--text-primary)', fontWeight: 600 }}>₹{Number(c.total).toFixed(2)}</td>
+                              <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{c.txn_count}</td>
+                              <td style={{ padding: '12px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <div style={{ flex: 1, height: 6, background: 'var(--bg-secondary)', borderRadius: 99 }}>
+                                    <div style={{ width: `${((Number(c.total) / grandTotal) * 100).toFixed(0)}%`, height: '100%', background: c.color || BAR_COLOR, borderRadius: 99 }} />
+                                  </div>
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: 36 }}>
+                                    {grandTotal > 0 ? ((Number(c.total) / grandTotal) * 100).toFixed(1) : 0}%
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>
+                          ));
+                        })()}
+                      </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* Incomes Breakdown */}
+              {catData.incomes && catData.incomes.length > 0 && (
+                <>
+                  <div className="glass-panel animate-fade-in" style={{ padding: '24px' }}>
+                    <h3 style={{ color: 'var(--text-primary)', marginBottom: '20px', fontSize: '1rem' }}>Income Share</h3>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <PieChart>
+                        <Pie data={(catData.incomes || []).map((c: any) => ({ ...c, total: Number(c.total) }))} dataKey="total" nameKey="category" cx="50%" cy="50%" outerRadius={100} label={(props: any) => `${props.name} (${((props.percent || 0) * 100).toFixed(0)}%)`} labelLine={true}>
+                          {(catData.incomes || []).map((c: any, i: number) => <Cell key={i} fill={c.color || `hsl(${120 + i * 37}, 70%, 50%)`} />)}
+                        </Pie>
+                        <Tooltip formatter={(v: any) => `₹${Number(v).toFixed(2)}`} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="glass-panel animate-fade-in" style={{ padding: '24px' }}>
+                    <h3 style={{ color: 'var(--text-primary)', marginBottom: '16px', fontSize: '1rem' }}>Income Categories</h3>
+                    <div className="table-container">
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                          {['Category', 'Total Received', 'Transactions', '% of Income'].map(h => (
+                            <th key={h} style={{ textAlign: 'left', padding: '10px 12px', color: 'var(--text-secondary)', fontSize: '0.8rem', fontWeight: 600 }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          const incomes = catData.incomes || [];
+                          const grandTotal = incomes.reduce((s: number, c: any) => s + Number(c.total), 0);
+                          return incomes.map((c: any, i: number) => (
+                            <tr key={i} style={{ borderBottom: '1px solid var(--glass-border)' }}>
+                              <td style={{ padding: '12px 12px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: c.color || `hsl(${120 + i * 37}, 70%, 50%)` }} />
+                                {c.category}
+                              </td>
+                              <td style={{ padding: '12px', color: 'var(--text-primary)', fontWeight: 600 }}>₹{Number(c.total).toFixed(2)}</td>
+                              <td style={{ padding: '12px', color: 'var(--text-secondary)' }}>{c.txn_count}</td>
+                              <td style={{ padding: '12px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <div style={{ flex: 1, height: 6, background: 'var(--bg-secondary)', borderRadius: 99 }}>
+                                    <div style={{ width: `${((Number(c.total) / grandTotal) * 100).toFixed(0)}%`, height: '100%', background: c.color || `hsl(${120 + i * 37}, 70%, 50%)`, borderRadius: 99 }} />
+                                  </div>
+                                  <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', minWidth: 36 }}>
+                                    {grandTotal > 0 ? ((Number(c.total) / grandTotal) * 100).toFixed(1) : 0}%
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>
+                          ));
+                        })()}
+                      </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
             </>
           )}
         </div>
@@ -565,7 +714,8 @@ const Reports: React.FC = () => {
               {/* Table */}
               <div className="glass-panel" style={{ padding: '24px' }}>
                 <h3 style={{ color: 'var(--text-primary)', marginBottom: '16px', fontSize: '1rem' }}>Detailed Comparison Table</h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="table-container">
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
                       {['Category', 'My Spending', 'Peer Avg', 'Difference', 'Status'].map(h => (
@@ -599,6 +749,7 @@ const Reports: React.FC = () => {
                     })}
                   </tbody>
                 </table>
+                </div>
               </div>
             </>
           )}
@@ -667,6 +818,7 @@ const Reports: React.FC = () => {
                   <h3 style={{ color: 'var(--text-primary)', marginBottom: '16px', fontSize: '1rem' }}>
                     Semester {semData.user.semester} — Average Spending by Category (Peers)
                   </h3>
+                  <div className="table-container">
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
@@ -692,6 +844,7 @@ const Reports: React.FC = () => {
                       })()}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               )}
             </>
@@ -747,7 +900,8 @@ const Reports: React.FC = () => {
               {/* Hostel stats table */}
               <div className="glass-panel" style={{ padding: '24px' }}>
                 <h3 style={{ color: 'var(--text-primary)', marginBottom: '16px', fontSize: '1rem' }}>Hostel Spending Stats</h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="table-container">
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid var(--glass-border)' }}>
                       {['Hostel', 'Students', 'Avg Expense', 'Min Expense', 'Max Expense'].map(h => (
@@ -771,6 +925,7 @@ const Reports: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
 
               {/* Hostel Category Breakdown */}

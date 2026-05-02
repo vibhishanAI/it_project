@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { connectDB } = require('./config/database');
 const startCron = require('./cron/recurringBillsCron');
+const startDailyReminderCron = require('./cron/dailyReminderCron');
 const authMiddleware = require('./middleware/authMiddleware');
 
 const app = express();
@@ -28,8 +29,9 @@ app.get('/', (req, res) => {
     res.send('Expense Tracker API is running...');
 });
 
-// Boot the Cron Scheduler
+// Boot the Cron Schedulers
 startCron();
+startDailyReminderCron();
 
 const PORT = process.env.PORT || 5001;
 

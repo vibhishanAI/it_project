@@ -32,16 +32,20 @@ router.get('/:userId', async (req, res) => {
             } else {
                 totalExpense += amt;
                 
-                // Aggregate by Category
+                // Aggregate by Category - Only if the category itself is NOT marked strictly as 'income'
                 const catName = tx.category ? tx.category.name : 'Uncategorized';
-                if(!categoryBreakdown[catName]) categoryBreakdown[catName] = 0;
-                categoryBreakdown[catName] += amt;
+                const isActuallyIncomeCategory = tx.category && tx.category.transaction_type === 'income';
 
-                // Special UoH Insight logic
-                const catLower = catName.toLowerCase();
-                if(catLower.includes('mess') || catLower.includes('food') || catLower.includes('dining')) messExpense += amt;
-                if(catLower.includes('travel') || catLower.includes('transport') || catLower.includes('bus')) travelExpense += amt;
-                if(catLower.includes('book') || catLower.includes('study') || catLower.includes('lab')) booksExpense += amt;
+                if (!isActuallyIncomeCategory) {
+                    if(!categoryBreakdown[catName]) categoryBreakdown[catName] = 0;
+                    categoryBreakdown[catName] += amt;
+
+                    // Special UoH Insight logic
+                    const catLower = catName.toLowerCase();
+                    if(catLower.includes('mess') || catLower.includes('food') || catLower.includes('dining')) messExpense += amt;
+                    if(catLower.includes('travel') || catLower.includes('transport') || catLower.includes('bus')) travelExpense += amt;
+                    if(catLower.includes('book') || catLower.includes('study') || catLower.includes('lab')) booksExpense += amt;
+                }
             }
         });
 

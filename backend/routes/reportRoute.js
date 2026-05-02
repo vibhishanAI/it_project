@@ -9,7 +9,7 @@ const router = express.Router();
 // ─────────────────────────────────────────────────────────────
 router.get('/:userId/category-breakdown', async (req, res) => {
     try {
-        const rows = await sequelize.query(`
+        const expenses = await sequelize.query(`
             SELECT 
                 COALESCE(c.name, 'Uncategorized') AS category,
                 c.color_hex                        AS color,
@@ -20,11 +20,27 @@ router.get('/:userId/category-breakdown', async (req, res) => {
             WHERE t.user_id = :userId
               AND t.transaction_type = 'expense'
               AND t.deleted_at IS NULL
+              AND (c.transaction_type != 'income' OR c.transaction_type IS NULL)
             GROUP BY COALESCE(c.name, 'Uncategorized'), c.color_hex
             ORDER BY total DESC
         `, { replacements: { userId: req.params.userId }, type: QueryTypes.SELECT });
 
-        res.json(rows);
+        const incomes = await sequelize.query(`
+            SELECT 
+                COALESCE(c.name, 'Uncategorized') AS category,
+                c.color_hex                        AS color,
+                SUM(t.amount)                      AS total,
+                COUNT(t.id)                        AS txn_count
+            FROM Transactions t
+            LEFT JOIN Categories c ON t.category_id = c.id
+            WHERE t.user_id = :userId
+              AND t.transaction_type = 'income'
+              AND t.deleted_at IS NULL
+            GROUP BY COALESCE(c.name, 'Uncategorized'), c.color_hex
+            ORDER BY total DESC
+        `, { replacements: { userId: req.params.userId }, type: QueryTypes.SELECT });
+
+        res.json({ expenses, incomes });
     } catch (e) {
         console.error(e);
         res.status(500).json({ error: 'Server Error' });

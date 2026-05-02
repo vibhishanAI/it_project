@@ -8,7 +8,7 @@ const Transaction = sequelize.define('Transaction', {
     amount: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
     transaction_type: { type: DataTypes.ENUM('income', 'expense'), allowNull: false },
     source_or_description: { type: DataTypes.TEXT },
-    date: { type: DataTypes.DATEONLY, allowNull: false },
+    date: { type: DataTypes.DATE, allowNull: false },
     payment_method: { type: DataTypes.STRING(50) },
     created_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
     updated_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },

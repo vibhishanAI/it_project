@@ -7,18 +7,19 @@ interface TransactionModalProps {
   onClose: () => void;
   userId: number;
   transactionToEdit?: any;
+  initialType?: 'income' | 'expense';
   onSuccess: () => void;
 }
 
-const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, userId, transactionToEdit, onSuccess }) => {
+const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, userId, transactionToEdit, initialType, onSuccess }) => {
   const [categories, setCategories] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     amount: '',
     transaction_type: 'expense',
     category_id: '',
     source_or_description: '',
-    date: new Date().toISOString().split('T')[0],
-    payment_method: ''
+    date: new Date().toISOString().slice(0, 16),
+    payment_method: 'Cash'
   });
   const [loading, setLoading] = useState(false);
   const [balanceError, setBalanceError] = useState('');
@@ -33,21 +34,21 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, us
           transaction_type: transactionToEdit.transaction_type,
           category_id: transactionToEdit.category_id || '',
           source_or_description: transactionToEdit.source_or_description || '',
-          date: transactionToEdit.date,
-          payment_method: transactionToEdit.payment_method || ''
+          date: transactionToEdit.date ? new Date(transactionToEdit.date).toISOString().slice(0, 16) : '',
+          payment_method: transactionToEdit.payment_method || 'Cash'
         });
       } else {
         setFormData({
           amount: '',
-          transaction_type: 'expense',
+          transaction_type: initialType || 'expense',
           category_id: '',
           source_or_description: '',
-          date: new Date().toISOString().split('T')[0],
-          payment_method: ''
+          date: new Date().toISOString().slice(0, 16),
+          payment_method: 'Cash'
         });
       }
     }
-  }, [isOpen, transactionToEdit]);
+  }, [isOpen, transactionToEdit, initialType]);
 
   const fetchCategories = async () => {
     try {
@@ -57,6 +58,10 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, us
       console.error(e);
     }
   };
+
+  const filteredCategories = categories.filter(cat => 
+    cat.transaction_type === formData.transaction_type || cat.transaction_type === 'both'
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,7 +112,7 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, us
         {/* Sticky header — X is always visible */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 24px 0 24px', flexShrink: 0 }}>
           <h2 className="text-gradient" style={{ margin: 0 }}>
-            {transactionToEdit ? 'Edit Transaction' : 'Add Transaction'}
+            {transactionToEdit ? 'Edit Transaction' : (formData.transaction_type === 'income' ? 'Add Income' : 'Add Expense')}
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}>
             <X size={24} />
@@ -122,11 +127,11 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, us
              <button type="button" 
                className="btn-primary flex-1" 
                style={{ background: formData.transaction_type === 'expense' ? 'var(--danger)' : 'var(--bg-secondary)' }}
-               onClick={() => setFormData({...formData, transaction_type: 'expense'})}>Expense</button>
+               onClick={() => setFormData({...formData, transaction_type: 'expense', category_id: ''})}>Expense</button>
              <button type="button" 
                className="btn-primary flex-1" 
                style={{ background: formData.transaction_type === 'income' ? 'var(--success)' : 'var(--bg-secondary)' }}
-               onClick={() => setFormData({...formData, transaction_type: 'income'})}>Income</button>
+               onClick={() => setFormData({...formData, transaction_type: 'income', category_id: ''})}>Income</button>
           </div>
 
           <div>
@@ -137,8 +142,8 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, us
           <div>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Category</label>
             <select className="input-base" value={formData.category_id} onChange={e => setFormData({...formData, category_id: e.target.value})}>
-              <option value="">None (General Income)</option>
-              {categories.map(cat => (
+              <option value="">{formData.transaction_type === 'income' ? 'General Income' : 'General Expense'}</option>
+              {filteredCategories.map(cat => (
                 <option key={cat.id} value={cat.id}>{cat.name}</option>
               ))}
             </select>
@@ -151,12 +156,15 @@ const TransactionModal: React.FC<TransactionModalProps> = ({ isOpen, onClose, us
 
           <div className="flex-responsive">
             <div className="flex-1">
-              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Date</label>
-              <input type="date" className="input-base" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Date & Time</label>
+              <input type="datetime-local" className="input-base" required value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
             </div>
             <div className="flex-1">
               <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Payment Method</label>
-              <input type="text" className="input-base" placeholder="e.g. UPI, Cash" value={formData.payment_method} onChange={e => setFormData({...formData, payment_method: e.target.value})} />
+              <select className="input-base" value={formData.payment_method} onChange={e => setFormData({...formData, payment_method: e.target.value})}>
+                <option value="Cash">Cash</option>
+                <option value="Bank">Bank</option>
+              </select>
             </div>
           </div>
 

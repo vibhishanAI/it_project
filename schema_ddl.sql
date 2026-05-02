@@ -35,6 +35,7 @@ CREATE TABLE Categories (
     user_id INT NULL, -- Nullable for system-predefined categories
     name VARCHAR(50) NOT NULL,
     type ENUM('predefined', 'custom') NOT NULL,
+    transaction_type ENUM('income', 'expense', 'both') DEFAULT 'expense',
     icon_name VARCHAR(50),
     color_hex VARCHAR(7),
     deleted_at TIMESTAMP NULL DEFAULT NULL,
@@ -49,7 +50,7 @@ CREATE TABLE Transactions (
     amount DECIMAL(10, 2) NOT NULL,
     transaction_type ENUM('income', 'expense') NOT NULL,
     source_or_description TEXT,
-    date DATE NOT NULL,
+    date DATETIME NOT NULL,
     payment_method VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
